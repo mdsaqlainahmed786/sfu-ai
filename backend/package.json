@@ -1,20 +1,20 @@
 {
-  "name": "frontend",
+  "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite"
+    "dev": "npx tsc -b && npx nodemon dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
-  "devDependencies": {
-    "typescript": "^5.9.2",
-    "vite": "^7.1.4"
-  },
   "dependencies": {
-    "mediasoup-client": "^3.15.4"
+    "mediasoup": "^3.19.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
