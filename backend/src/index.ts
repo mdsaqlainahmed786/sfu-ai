@@ -34,7 +34,7 @@ function genId() {
 
 async function createWebRtcTransport(router: mediasoup.types.Router) {
   const transport = await router.createWebRtcTransport({
-    listenIps: [{ ip: "0.0.0.0", announcedIp: "127.0.0.1" }], // replace announcedIp in prod
+    listenIps: [{ ip: "0.0.0.0", announcedIp: "127.0.0.1" }],
     enableUdp: true,
     enableTcp: true,
     preferUdp: true
@@ -58,12 +58,10 @@ async function boot() {
     console.log(`🔎 Peer connected: ${peer.id}`);
 
     ws.on("message", async (buf) => {
-      console.log("🔎 LOG: Raw message:", buf.toString());
       const msg = JSON.parse(buf.toString());
-      // console.log("RX", peer.id, msg);
 
       try {
-        // 0) Join a room (MUST be first)
+        // 0) Join a room
         if (msg.action === "joinRoom") {
           const roomId: string = msg.roomId;
           if (!roomId) return;
@@ -79,16 +77,20 @@ async function boot() {
           const room = rooms.get(roomId)!;
           room.peers.set(peer.id, peer);
           console.log(`🔎 Peer ${peer.id} joined room ${roomId}`);
-          console.log(`📤 Sending roomJoined to ${peer.id} for room ${roomId}`);
-          ws.send(JSON.stringify({ action: "roomJoined", roomId }));
+
+          // ✅ Send list of existing producers to this peer
+          const existing = room.producers.map((p) => ({
+            ownerPeerId: p.ownerPeerId,
+            producerId: p.producer.id,
+            kind: p.producer.kind
+          }));
+
+          ws.send(JSON.stringify({ action: "roomJoined", roomId, existingProducers: existing }));
         }
 
-        // 1) Router RTP capabilities (scoped to room.router)
+        // 1) Router RTP capabilities
         else if (msg.action === "getRouterRtpCapabilities") {
-          if (!peer.roomId) {
-            console.warn(`⚠️ ${peer.id} asked caps before joinRoom`);
-            return;
-          }
+          if (!peer.roomId) return;
           const room = rooms.get(peer.roomId)!;
           ws.send(JSON.stringify({
             action: "routerRtpCapabilities",
@@ -96,7 +98,7 @@ async function boot() {
           }));
         }
 
-        // 2) Create SEND transport (room-scoped)
+        // 2) Create SEND transport
         else if (msg.action === "createSendTransport") {
           if (!peer.roomId) return;
           const room = rooms.get(peer.roomId)!;
@@ -113,7 +115,7 @@ async function boot() {
           }));
         }
 
-        // 3) Create RECV transport (room-scoped)
+        // 3) Create RECV transport
         else if (msg.action === "createRecvTransport") {
           if (!peer.roomId) return;
           const room = rooms.get(peer.roomId)!;
@@ -130,21 +132,18 @@ async function boot() {
           }));
         }
 
-        // 4) Connect transport (DTLS)
+        // 4) Connect transport
         else if (msg.action === "connectTransport") {
           const t =
             peer.sendTransport?.id === msg.id ? peer.sendTransport :
               peer.recvTransport?.id === msg.id ? peer.recvTransport : undefined;
 
-          if (!t) {
-            console.error(`❌ No transport for ${peer.id} (id=${msg.id})`);
-            return;
-          }
+          if (!t) return;
           await t.connect({ dtlsParameters: msg.dtlsParameters });
           ws.send(JSON.stringify({ action: "transportConnected", id: t.id }));
         }
 
-        // 5) Produce (publish track into THIS room)
+        // 5) Produce
         else if (msg.action === "produce") {
           if (!peer.roomId || !peer.sendTransport) return;
           const room = rooms.get(peer.roomId)!;
@@ -158,18 +157,19 @@ async function boot() {
           room.producers.push({ producer, ownerPeerId: peer.id });
           ws.send(JSON.stringify({ action: "produced", id: producer.id }));
 
-          // Notify peers only in this room
+          // Notify other peers in room
           for (const [, otherPeer] of room.peers) {
-            if (otherPeer.id === peer.id) continue;
-            otherPeer.ws.send(JSON.stringify({
-              action: "newProducer",
-              ownerPeerId: peer.id,
-              producerId: producer.id
-            }));
+            if (otherPeer.id !== peer.id) {
+              otherPeer.ws.send(JSON.stringify({
+                action: "newProducer",
+                ownerPeerId: peer.id,
+                producerId: producer.id
+              }));
+            }
           }
         }
 
-        // 6) Consume (subscribe to others in THIS room)
+        // 6) Consume
         else if (msg.action === "consume") {
           if (!peer.roomId || !peer.recvTransport) return;
           const room = rooms.get(peer.roomId)!;
@@ -199,51 +199,68 @@ async function boot() {
             }));
           }
         }
+        // End the entire room (host action)
+        else if (msg.action === "endRoom") {
+          const rid = peer.roomId;
+          if (!rid) return;
+          const room = rooms.get(rid);
+          if (!room) return;
+
+          // Notify all peers
+          for (const [, otherPeer] of room.peers) {
+            otherPeer.ws.send(JSON.stringify({ action: "roomEnded" }));
+            otherPeer.producers.forEach((p) => p.close());
+            otherPeer.consumers.forEach((c) => c.close());
+            otherPeer.sendTransport?.close();
+            otherPeer.recvTransport?.close();
+            otherPeer.ws.close(); // force-close their WS
+          }
+
+          // Clean up router
+          room.router.close();
+          rooms.delete(rid);
+          console.log(`🛑 Room ${rid} ended by ${peer.id}`);
+        }
+
       } catch (err) {
         console.error("❌ Error handling message:", err);
       }
+
     });
 
-ws.on("close", () => {
-  console.log(`🔎 Peer disconnected: ${peer.id}`);
-  const rid = peer.roomId;
-  if (!rid) return;
 
-  const room = rooms.get(rid);
-  if (!room) return;
+    ws.on("close", () => {
+      console.log(`🔎 Peer disconnected: ${peer.id}`);
+      const rid = peer.roomId;
+      if (!rid) return;
+      const room = rooms.get(rid);
+      if (!room) return;
 
-  console.log("ROOM EXISTS:", room.id);
-  console.log("Deleting peer:", peer.id);
+      // Notify others
+      for (const [, otherPeer] of room.peers) {
+        if (otherPeer.id !== peer.id) {
+          otherPeer.ws.send(JSON.stringify({
+            action: "peerDisconnected",
+            peerId: peer.id
+          }));
+        }
+      }
 
-  // ✅ Notify other peers BEFORE deleting this one
-  for (const [, otherPeer] of room.peers) {
-    if (otherPeer.id !== peer.id) {
-      otherPeer.ws.send(JSON.stringify({
-        action: "peerDisconnected",
-        peerId: peer.id
-      }));
-    }
-  }
+      // Cleanup
+      peer.producers.forEach((p) => p.close());
+      peer.consumers.forEach((c) => c.close());
+      peer.sendTransport?.close();
+      peer.recvTransport?.close();
 
-  // Now do the cleanup
-  peer.producers.forEach((p) => p.close());
-  peer.consumers.forEach((c) => c.close());
-  peer.sendTransport?.close();
-  peer.recvTransport?.close();
+      room.producers = room.producers.filter((x) => x.ownerPeerId !== peer.id);
+      room.peers.delete(peer.id);
 
-  room.producers = room.producers.filter((x) => x.ownerPeerId !== peer.id);
-  room.peers.delete(peer.id);
-
-  // delete room if empty
-  if (room.peers.size === 0) {
-    room.router.close();
-    rooms.delete(room.id);
-    console.log(`🧹 Deleted empty room ${room.id}`);
-  }
-});
-
-
-
+      if (room.peers.size === 0) {
+        room.router.close();
+        rooms.delete(room.id);
+        console.log(`🧹 Deleted empty room ${room.id}`);
+      }
+    });
   });
 }
 
