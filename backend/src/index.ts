@@ -54,15 +54,22 @@ function genId() {
 
 async function createWebRtcTransport(router: mediasoup.types.Router) {
   const transport = await router.createWebRtcTransport({
-    listenIps: [{ ip: "0.0.0.0", announcedIp: "127.0.0.1" }],
+    listenIps: [
+      {
+        ip: "0.0.0.0",
+        announcedIp: "54.254.162.138"
+      }
+    ],
     enableUdp: true,
     enableTcp: true,
     preferUdp: true
   });
+
   transport.on("dtlsstatechange", (state) => {
     console.log(`🔎 transport ${transport.id} dtlsstatechange → ${state}`);
     if (state === "closed") transport.close();
   });
+
   return transport;
 }
 
