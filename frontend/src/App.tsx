@@ -1,13 +1,18 @@
 import { useRef, useState, useEffect } from "react";
 import { Device } from "mediasoup-client";
 import "./App.css";
+import * as mediasoupClient from "mediasoup-client";
+
+// Types are in mediasoupClient.types
+type Transport = mediasoupClient.types.Transport;
+type Producer = mediasoupClient.types.Producer;
 
 interface RemoteVideoProps {
   stream: MediaStream;
   peerId: string;
 }
 
-function RemoteVideo({ stream, peerId }: RemoteVideoProps) {
+function RemoteVideo({ stream }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -52,14 +57,14 @@ function App() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const deviceRef = useRef<Device | null>(null);
-  const sendTransportRef = useRef<any>(null);
-  const recvTransportRef = useRef<any>(null);
+const sendTransportRef = useRef<Transport | null>(null);
+const recvTransportRef = useRef<Transport | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamsMap = useRef<Record<string, MediaStream>>({});
-  const pendingProducersRef = useRef<any[] | null>(null);
+  const pendingProducersRef = useRef<Producer[] | null>(null);
    const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
-
+  
   const toggleVideo = () => {
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
@@ -288,7 +293,7 @@ function App() {
       <h2>Remote Videos</h2>
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         {remoteStreams.map(({ peerId, stream }) => (
-          <RemoteVideo key={peerId} stream={stream} />
+          <RemoteVideo key={peerId} stream={stream} peerId={peerId} />
         ))}
       </div>
     </div>
