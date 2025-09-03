@@ -148,6 +148,7 @@ function App() {
               credential: "openrelayproject",
             },
           ],
+            iceTransportPolicy: "relay"
         });
         sendTransportRef.current = sendTransport;
 
@@ -199,6 +200,7 @@ function App() {
               credential: "openrelayproject",
             },
           ],
+            iceTransportPolicy: "relay"
         });
         recvTransportRef.current = recvTransport;
 
