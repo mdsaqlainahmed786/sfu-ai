@@ -1,6 +1,13 @@
 import { WebSocketServer, WebSocket } from "ws";
+import express from "express";
 import * as mediasoup from "mediasoup";
+import cors from "cors";
 
+const app = express();
+app.use(cors({
+  origin: ["http://localhost:5173", "https://sfu-ai.onrender.com"],
+  credentials: true
+}));
 type Peer = {
   id: string;
   roomId?: string;
