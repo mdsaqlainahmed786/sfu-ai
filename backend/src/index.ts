@@ -58,7 +58,7 @@ async function boot() {
     console.log(`🔎 Peer connected: ${peer.id}`);
 
     ws.on("message", async (buf) => {
-        console.log("🔎 LOG: Raw message:", buf.toString());
+      console.log("🔎 LOG: Raw message:", buf.toString());
       const msg = JSON.parse(buf.toString());
       // console.log("RX", peer.id, msg);
 
@@ -134,7 +134,7 @@ async function boot() {
         else if (msg.action === "connectTransport") {
           const t =
             peer.sendTransport?.id === msg.id ? peer.sendTransport :
-            peer.recvTransport?.id === msg.id ? peer.recvTransport : undefined;
+              peer.recvTransport?.id === msg.id ? peer.recvTransport : undefined;
 
           if (!t) {
             console.error(`❌ No transport for ${peer.id} (id=${msg.id})`);
@@ -204,42 +204,46 @@ async function boot() {
       }
     });
 
-    ws.on("close", () => {
-      console.log(`🔎 Peer disconnected: ${peer.id}`);
-      
-      const rid = peer.roomId;
+ws.on("close", () => {
+  console.log(`🔎 Peer disconnected: ${peer.id}`);
+  const rid = peer.roomId;
+  if (!rid) return;
 
-      if (!rid) return;
+  const room = rooms.get(rid);
+  if (!room) return;
 
-      const room = rooms.get(rid);
-      if (!room) return;
-      console.log("ROOM EXISTS:", room.id);
-      console.log("Deleting peer:", peer.id);
-      room.peers.delete(peer.id);
-      // close this peer's stuff
-      peer.producers.forEach((p) => p.close());
-      peer.consumers.forEach((c) => c.close());
-      peer.sendTransport?.close();
-      peer.recvTransport?.close();
+  console.log("ROOM EXISTS:", room.id);
+  console.log("Deleting peer:", peer.id);
 
-      // remove from room lists
-      room.producers = room.producers.filter((x) => x.ownerPeerId !== peer.id);
-      room.peers.delete(peer.id);
+  // ✅ Notify other peers BEFORE deleting this one
+  for (const [, otherPeer] of room.peers) {
+    if (otherPeer.id !== peer.id) {
+      otherPeer.ws.send(JSON.stringify({
+        action: "peerDisconnected",
+        peerId: peer.id
+      }));
+    }
+  }
 
-      // delete room if empty
-      if (room.peers.size === 0) {
-        room.router.close();
-        rooms.delete(room.id);
-        console.log(`🧹 Deleted empty room ${room.id}`);
-      }
+  // Now do the cleanup
+  peer.producers.forEach((p) => p.close());
+  peer.consumers.forEach((c) => c.close());
+  peer.sendTransport?.close();
+  peer.recvTransport?.close();
 
-      // NOTIFY OTHER PEERS IN THE ROOM THAT THIS PEER DISCONNECTED
-// NOTIFY OTHER PEERS FIRST, before removing from room
+  room.producers = room.producers.filter((x) => x.ownerPeerId !== peer.id);
+  room.peers.delete(peer.id);
+
+  // delete room if empty
+  if (room.peers.size === 0) {
+    room.router.close();
+    rooms.delete(room.id);
+    console.log(`🧹 Deleted empty room ${room.id}`);
+  }
+});
 
 
-// THEN remove from room
 
-    });
   });
 }
 

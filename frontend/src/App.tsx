@@ -241,8 +241,15 @@ function App() {
       // Handle remote peer disconnect
       if (msg.action === "peerDisconnected") {
         const peerId = msg.peerId;
+
+        // Stop tracks to release resources
+        const stream = remoteStreamsMap.current[peerId];
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+          delete remoteStreamsMap.current[peerId];
+        }
+
         setRemoteStreams((prev) => prev.filter((v) => v.peerId !== peerId));
-        delete remoteStreamsMap.current[peerId];
       }
     };
 
