@@ -50,8 +50,8 @@ async function boot() {
   worker = await mediasoup.createWorker();
   console.log("SFU worker ready");
 
-  const wss = new WebSocketServer({ port: 3000 });
-  console.log("Signaling on ws://localhost:3000");
+  const wss = new WebSocketServer({ port: Number(process.env.PORT) || 3000 });
+  console.log(`Signaling on ws://localhost:${wss.options.port}`);
 
   wss.on("connection", (ws) => {
     const peer: Peer = { id: genId(), producers: [], consumers: [], ws };
