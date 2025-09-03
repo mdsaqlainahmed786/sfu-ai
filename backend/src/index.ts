@@ -1,5 +1,4 @@
 import { WebSocketServer, WebSocket } from "ws";
-import fetch from "node-fetch";
 import express from "express";
 import * as mediasoup from "mediasoup";
 import cors from "cors";
@@ -36,18 +35,6 @@ const mediaCodecs: mediasoup.types.RtpCodecCapability[] = [
   { kind: "video", mimeType: "video/VP8", clockRate: 90000 }
 ];
 
-
-async function getPublicIp() {
-  try {
-    const res = await fetch("https://api.ipify.org?format=json");
-    const data = await res.json();
-    //@ts-ignore
-    console.log("🌍 Public IP of server:", data.ip);
-  } catch (err) {
-    console.error("❌ Could not fetch public IP", err);
-  }
-}
-
 function genId() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -74,7 +61,6 @@ async function createWebRtcTransport(router: mediasoup.types.Router) {
 }
 
 async function boot() {
-  await getPublicIp();
   worker = await mediasoup.createWorker();
   console.log("SFU worker ready");
 
