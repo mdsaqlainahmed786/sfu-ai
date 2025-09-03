@@ -22,7 +22,9 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
   }, [stream]);
 
   return (
-    <div style={{ position: "relative", display: "inline-block", margin: "5px" }}>
+    <div
+      style={{ position: "relative", display: "inline-block", margin: "5px" }}
+    >
       <video
         ref={videoRef}
         autoPlay
@@ -48,7 +50,7 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
 }
 
 function App() {
-const WS_URL = "wss://sfu-ai.onrender.com";
+  const WS_URL = "wss://sfu-ai.onrender.com";
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [remoteStreams, setRemoteStreams] = useState<
@@ -57,14 +59,14 @@ const WS_URL = "wss://sfu-ai.onrender.com";
 
   const wsRef = useRef<WebSocket | null>(null);
   const deviceRef = useRef<Device | null>(null);
-const sendTransportRef = useRef<Transport | null>(null);
-const recvTransportRef = useRef<Transport | null>(null);
+  const sendTransportRef = useRef<Transport | null>(null);
+  const recvTransportRef = useRef<Transport | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamsMap = useRef<Record<string, MediaStream>>({});
   const pendingProducersRef = useRef<Producer[] | null>(null);
-   const [videoEnabled, setVideoEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  
+
   const toggleVideo = () => {
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
@@ -132,7 +134,15 @@ const recvTransportRef = useRef<Transport | null>(null);
 
       if (msg.action === "createSendTransport") {
         const device = deviceRef.current!;
-        const sendTransport = device.createSendTransport(msg.params);
+        const sendTransport = device.createSendTransport({
+          ...msg.params,
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "turn:openrelay.metered.ca:80" },
+            { urls: "turn:openrelay.metered.ca:443" },
+            { urls: "turn:openrelay.metered.ca:443?transport=tcp" },
+          ],
+        });
         sendTransportRef.current = sendTransport;
 
         sendTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -169,7 +179,15 @@ const recvTransportRef = useRef<Transport | null>(null);
 
       if (msg.action === "createRecvTransport") {
         const device = deviceRef.current!;
-        const recvTransport = device.createRecvTransport(msg.params);
+        const recvTransport = device.createRecvTransport({
+          ...msg.params,
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "turn:openrelay.metered.ca:80" },
+            { urls: "turn:openrelay.metered.ca:443" },
+            { urls: "turn:openrelay.metered.ca:443?transport=tcp" },
+          ],
+        });
         recvTransportRef.current = recvTransport;
 
         recvTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -267,16 +285,14 @@ const recvTransportRef = useRef<Transport | null>(null);
     };
   }, []);
 
- return (
+  return (
     <div>
       <h1>SFU Demo</h1>
       <button onClick={handleStart}>Start</button>
       <button onClick={toggleVideo}>
         {videoEnabled ? "Turn Video Off" : "Turn Video On"}
       </button>
-      <button onClick={toggleAudio}>
-        {audioEnabled ? "Mute" : "Unmute"}
-      </button>
+      <button onClick={toggleAudio}>{audioEnabled ? "Mute" : "Unmute"}</button>
       <button
         onClick={() => {
           if (wsRef.current) {
