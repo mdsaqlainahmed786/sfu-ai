@@ -50,7 +50,7 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
 }
 
 function App() {
-  const WS_URL = "wss://sfu-ai.onrender.com";
+  const WS_URL = "https://typically-vol-hull-notify.trycloudflare.com";
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [remoteStreams, setRemoteStreams] = useState<
