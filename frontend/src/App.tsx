@@ -48,7 +48,7 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
 }
 
 function App() {
-  const WS_URL = "https://sfu-ai.onrender.com";
+const WS_URL = "wss://sfu-ai.onrender.com";
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [remoteStreams, setRemoteStreams] = useState<
