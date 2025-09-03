@@ -57,7 +57,7 @@ async function createWebRtcTransport(router: mediasoup.types.Router) {
     listenIps: [
       {
         ip: "0.0.0.0",
-        announcedIp: "54.254.162.138"
+        announcedIp: "ec2-13-233-224-241.ap-south-1.compute.amazonaws.com"
       }
     ],
     enableUdp: true,
