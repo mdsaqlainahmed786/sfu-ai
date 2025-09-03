@@ -1,25 +1,44 @@
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Device } from "mediasoup-client";
 import "./App.css";
 
 interface RemoteVideoProps {
   stream: MediaStream;
+  peerId: string;
 }
 
-function RemoteVideo({ stream }: RemoteVideoProps) {
+function RemoteVideo({ stream, peerId }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
+
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      style={{ width: "300px", margin: "5px" }}
-    />
+    <div style={{ position: "relative", display: "inline-block", margin: "5px" }}>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        style={{ width: "300px", border: "1px solid #ccc" }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "7px",
+          left: "1px",
+          background: "rgba(0,0,0,0.6)",
+          color: "white",
+          padding: "2px 6px",
+          borderRadius: "4px",
+          fontSize: "12px",
+        }}
+      >
+        George Chao
+      </div>
+    </div>
   );
 }
 
