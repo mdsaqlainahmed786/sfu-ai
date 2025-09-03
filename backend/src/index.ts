@@ -206,13 +206,17 @@ async function boot() {
 
     ws.on("close", () => {
       console.log(`🔎 Peer disconnected: ${peer.id}`);
+      
       const rid = peer.roomId;
+
       if (!rid) return;
 
       const room = rooms.get(rid);
       if (!room) return;
-
-      // close this peer’s stuff
+      console.log("ROOM EXISTS:", room.id);
+      console.log("Deleting peer:", peer.id);
+      room.peers.delete(peer.id);
+      // close this peer's stuff
       peer.producers.forEach((p) => p.close());
       peer.consumers.forEach((c) => c.close());
       peer.sendTransport?.close();
@@ -228,6 +232,13 @@ async function boot() {
         rooms.delete(room.id);
         console.log(`🧹 Deleted empty room ${room.id}`);
       }
+
+      // NOTIFY OTHER PEERS IN THE ROOM THAT THIS PEER DISCONNECTED
+// NOTIFY OTHER PEERS FIRST, before removing from room
+
+
+// THEN remove from room
+
     });
   });
 }

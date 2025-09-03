@@ -13,6 +13,8 @@ const remoteContainer = document.getElementById("remoteContainer") as HTMLDivEle
 
 // Store remote streams per peer
 const remoteStreams: Record<string, MediaStream> = {};
+const remoteVideoElements: Record<string, HTMLVideoElement> = {};
+
 function ensureRemoteVideoEl(ownerPeerId: string) {
   if (!remoteStreams[ownerPeerId]) {
     remoteStreams[ownerPeerId] = new MediaStream();
@@ -20,8 +22,39 @@ function ensureRemoteVideoEl(ownerPeerId: string) {
     el.autoplay = true;
     el.playsInline = true;
     el.srcObject = remoteStreams[ownerPeerId];
+    el.style.width = "300px";
+    el.style.height = "200px";
+    el.style.border = "1px solid #ccc";
+    el.style.margin = "5px";
     remoteContainer.appendChild(el);
+    remoteVideoElements[ownerPeerId] = el;
     console.log(`🎥 Created <video> for remote peer ${ownerPeerId}`);
+  }
+}
+
+function removeRemoteVideoEl(peerId: string) {
+  console.log(`🗑️ Attempting to remove video for peer: ${peerId}`);
+  
+  if (remoteStreams[peerId]) {
+    console.log(`🛑 Stopping tracks for peer: ${peerId}`);
+    // Stop all tracks in the stream
+    remoteStreams[peerId].getTracks().forEach(track => {
+      track.stop();
+      console.log(`⏹️ Stopped track: ${track.kind} for peer: ${peerId}`);
+    });
+    delete remoteStreams[peerId];
+  } else {
+    console.log(`⚠️ No stream found for peer: ${peerId}`);
+  }
+  
+  if (remoteVideoElements[peerId]) {
+    console.log(`🗑️ Removing DOM element for peer: ${peerId}`);
+    // Remove the video element from DOM
+    remoteVideoElements[peerId].remove();
+    delete remoteVideoElements[peerId];
+    console.log(`✅ Removed <video> for disconnected peer ${peerId}`);
+  } else {
+    console.log(`⚠️ No video element found for peer: ${peerId}`);
   }
 }
 
@@ -146,6 +179,12 @@ async function start() {
       if (recvTransport && device) {
         ws.send(JSON.stringify({ action: "consume", rtpCapabilities: device.rtpCapabilities }));
       }
+    }
+
+    // NEW: Handle peer disconnection
+    if (msg.action === "peerDisconnected") {
+      console.log("👋 Peer disconnected:", msg.peerId);
+      removeRemoteVideoEl(msg.peerId);
     }
   };
 
