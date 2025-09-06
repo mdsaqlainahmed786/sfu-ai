@@ -1,11 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { Device } from "mediasoup-client";
 import "./App.css";
-import * as mediasoupClient from "mediasoup-client";
 
 // Types are in mediasoupClient.types
-type Transport = mediasoupClient.types.Transport;
-type Producer = mediasoupClient.types.Producer;
 
 interface RemoteVideoProps {
   stream: MediaStream;
@@ -296,7 +293,7 @@ function App() {
       <h2>Remote Videos</h2>
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         {remoteStreams.map(({ peerId, stream }) => (
-          <RemoteVideo key={peerId} stream={stream} peerId={peerId} />
+          <RemoteVideo key={peerId} stream={stream} />
         ))}
       </div>
     </div>
