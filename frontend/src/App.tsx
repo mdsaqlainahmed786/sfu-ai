@@ -9,7 +9,6 @@ type Producer = mediasoupClient.types.Producer;
 
 interface RemoteVideoProps {
   stream: MediaStream;
-  peerId: string;
 }
 
 function RemoteVideo({ stream }: RemoteVideoProps) {
@@ -59,12 +58,13 @@ function App() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const deviceRef = useRef<Device | null>(null);
-  const sendTransportRef = useRef<Transport | null>(null);
-  const recvTransportRef = useRef<Transport | null>(null);
+  
+  const sendTransportRef = useRef<null>(null);
+  const recvTransportRef = useRef<null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamsMap = useRef<Record<string, MediaStream>>({});
-  const pendingProducersRef = useRef<Producer[] | null>(null);
-  const [videoEnabled, setVideoEnabled] = useState(true);
+  const pendingProducersRef = useRef<null>(null);
+   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
   const toggleVideo = () => {
@@ -134,22 +134,8 @@ function App() {
 
       if (msg.action === "createSendTransport") {
         const device = deviceRef.current!;
-        const sendTransport = device.createSendTransport({
-          ...msg.params,
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            {
-              urls: [
-                "turn:openrelay.metered.ca:80",
-                "turn:openrelay.metered.ca:443",
-                "turn:openrelay.metered.ca:443?transport=tcp",
-              ],
-              username: "openrelayproject",
-              credential: "openrelayproject",
-            },
-          ],
-            iceTransportPolicy: "relay"
-        });
+        const sendTransport = device.createSendTransport(msg.params)
+        //@ts-expect-error ref;
         sendTransportRef.current = sendTransport;
 
         sendTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -186,22 +172,8 @@ function App() {
 
       if (msg.action === "createRecvTransport") {
         const device = deviceRef.current!;
-        const recvTransport = device.createRecvTransport({
-          ...msg.params,
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            {
-              urls: [
-                "turn:openrelay.metered.ca:80",
-                "turn:openrelay.metered.ca:443",
-                "turn:openrelay.metered.ca:443?transport=tcp",
-              ],
-              username: "openrelayproject",
-              credential: "openrelayproject",
-            },
-          ],
-            iceTransportPolicy: "relay"
-        });
+        const recvTransport = device.createRecvTransport(msg.params);
+        //@ts-expect-error ref
         recvTransportRef.current = recvTransport;
 
         recvTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -229,6 +201,7 @@ function App() {
 
       if (msg.action === "consuming") {
         const recvTransport = recvTransportRef.current!;
+        //@ts-expect-error ref
         const consumer = await recvTransport.consume(msg.params);
         const peerId = msg.params.ownerPeerId;
         let stream = remoteStreamsMap.current[peerId];
