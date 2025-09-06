@@ -1,3 +1,4 @@
+//@ts-expect-error
 import { Device } from "mediasoup-client";
 
 const WS_URL = "ws://localhost:3000";
@@ -170,7 +171,12 @@ async function start() {
         rtpParameters: msg.params.rtpParameters
       });
       ensureRemoteVideoEl(msg.params.ownerPeerId);
-      remoteStreams[msg.params.ownerPeerId].addTrack(consumer.track);
+      const remoteStream = remoteStreams[msg.params.ownerPeerId];
+      if (remoteStream) {
+        remoteStream.addTrack(consumer.track);
+      } else {
+        console.warn(`⚠️ remoteStream for peer ${msg.params.ownerPeerId} is undefined`);
+      }
     }
 
     // Step 5: new producer appeared

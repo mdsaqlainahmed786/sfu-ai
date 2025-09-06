@@ -1,6 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { Device } from "mediasoup-client";
 import "./App.css";
+import * as mediasoupClient from "mediasoup-client";
+
+// Types are in mediasoupClient.types
+type Transport = mediasoupClient.types.Transport;
+type Producer = mediasoupClient.types.Producer;
 
 interface RemoteVideoProps {
   stream: MediaStream;
@@ -16,7 +21,9 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
   }, [stream]);
 
   return (
-    <div style={{ position: "relative", display: "inline-block", margin: "5px" }}>
+    <div
+      style={{ position: "relative", display: "inline-block", margin: "5px" }}
+    >
       <video
         ref={videoRef}
         autoPlay
@@ -42,7 +49,7 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
 }
 
 function App() {
-  const WS_URL = "ws://localhost:3000";
+  const WS_URL = "wss://ec2-13-233-224-241.ap-south-1.compute.amazonaws.com:3000";
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [remoteStreams, setRemoteStreams] = useState<
@@ -265,16 +272,14 @@ function App() {
     };
   }, []);
 
- return (
+  return (
     <div>
       <h1>SFU Demo</h1>
       <button onClick={handleStart}>Start</button>
       <button onClick={toggleVideo}>
         {videoEnabled ? "Turn Video Off" : "Turn Video On"}
       </button>
-      <button onClick={toggleAudio}>
-        {audioEnabled ? "Mute" : "Unmute"}
-      </button>
+      <button onClick={toggleAudio}>{audioEnabled ? "Mute" : "Unmute"}</button>
       <button
         onClick={() => {
           if (wsRef.current) {
@@ -291,7 +296,7 @@ function App() {
       <h2>Remote Videos</h2>
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         {remoteStreams.map(({ peerId, stream }) => (
-          <RemoteVideo key={peerId} stream={stream} />
+          <RemoteVideo key={peerId} stream={stream} peerId={peerId} />
         ))}
       </div>
     </div>

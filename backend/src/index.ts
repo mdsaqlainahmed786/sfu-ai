@@ -1,6 +1,13 @@
 import { WebSocketServer, WebSocket } from "ws";
+import express from "express";
 import * as mediasoup from "mediasoup";
+import cors from "cors";
 
+const app = express();
+app.use(cors({
+  origin: ["http://localhost:5173", "https://sfu-ai.onrender.com"],
+  credentials: true
+}));
 type Peer = {
   id: string;
   roomId?: string;
@@ -34,15 +41,22 @@ function genId() {
 
 async function createWebRtcTransport(router: mediasoup.types.Router) {
   const transport = await router.createWebRtcTransport({
-    listenIps: [{ ip: "0.0.0.0", announcedIp: "127.0.0.1" }],
+    listenIps: [
+      {
+        ip: "0.0.0.0",
+        announcedIp: "ec2-13-233-224-241.ap-south-1.compute.amazonaws.com"
+      }
+    ],
     enableUdp: true,
     enableTcp: true,
     preferUdp: true
   });
+
   transport.on("dtlsstatechange", (state) => {
     console.log(`🔎 transport ${transport.id} dtlsstatechange → ${state}`);
     if (state === "closed") transport.close();
   });
+
   return transport;
 }
 
@@ -50,8 +64,8 @@ async function boot() {
   worker = await mediasoup.createWorker();
   console.log("SFU worker ready");
 
-  const wss = new WebSocketServer({ port: 3000 });
-  console.log("Signaling on ws://localhost:3000");
+  const wss = new WebSocketServer({ port: Number(process.env.PORT) || 3000 });
+  console.log(`Signaling on ws://localhost:${wss.options.port}`);
 
   wss.on("connection", (ws) => {
     const peer: Peer = { id: genId(), producers: [], consumers: [], ws };
