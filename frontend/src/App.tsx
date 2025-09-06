@@ -4,10 +4,9 @@ import "./App.css";
 
 interface RemoteVideoProps {
   stream: MediaStream;
-  peerId: string;
 }
 
-function RemoteVideo({ stream, peerId }: RemoteVideoProps) {
+function RemoteVideo({ stream }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -52,11 +51,12 @@ function App() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const deviceRef = useRef<Device | null>(null);
-  const sendTransportRef = useRef<any>(null);
-  const recvTransportRef = useRef<any>(null);
+  
+  const sendTransportRef = useRef<null>(null);
+  const recvTransportRef = useRef<null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamsMap = useRef<Record<string, MediaStream>>({});
-  const pendingProducersRef = useRef<any[] | null>(null);
+  const pendingProducersRef = useRef<null>(null);
    const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
@@ -127,7 +127,8 @@ function App() {
 
       if (msg.action === "createSendTransport") {
         const device = deviceRef.current!;
-        const sendTransport = device.createSendTransport(msg.params);
+        const sendTransport = device.createSendTransport(msg.params)
+        //@ts-expect-error ref;
         sendTransportRef.current = sendTransport;
 
         sendTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -165,6 +166,7 @@ function App() {
       if (msg.action === "createRecvTransport") {
         const device = deviceRef.current!;
         const recvTransport = device.createRecvTransport(msg.params);
+        //@ts-expect-error ref
         recvTransportRef.current = recvTransport;
 
         recvTransport.on("connect", ({ dtlsParameters }, callback) => {
@@ -192,6 +194,7 @@ function App() {
 
       if (msg.action === "consuming") {
         const recvTransport = recvTransportRef.current!;
+        //@ts-expect-error ref
         const consumer = await recvTransport.consume(msg.params);
         const peerId = msg.params.ownerPeerId;
         let stream = remoteStreamsMap.current[peerId];
