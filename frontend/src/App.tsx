@@ -46,7 +46,7 @@ function RemoteVideo({ stream }: RemoteVideoProps) {
 }
 
 function App() {
-  const WS_URL = "wss://ec2-13-233-224-241.ap-south-1.compute.amazonaws.com:3000";
+  const WS_URL = "https://sfu-ai-1.onrender.com";
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [remoteStreams, setRemoteStreams] = useState<
